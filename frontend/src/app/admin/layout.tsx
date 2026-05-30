@@ -34,6 +34,10 @@ export default function AdminLayout({
   const isLoginPage = pathname === '/admin/login';
   if (!user && !isLoginPage) return null;
 
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
+
   return (
     <div className="flex min-h-screen bg-dark-100">
       <Sidebar />

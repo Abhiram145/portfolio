@@ -85,7 +85,7 @@ const seed = async () => {
   // ─── Sample Projects ──────────────────────────────────────────────────────
   const projCount = await Project.countDocuments();
   if (projCount === 0) {
-    await Project.insertMany([
+    await Project.create([
       {
         title: "DevPortfolio CMS",
         shortDescription: "A full-stack portfolio CMS with admin dashboard and dynamic content management.",
