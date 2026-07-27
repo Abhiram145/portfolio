@@ -5,16 +5,9 @@ const Experience = require("../models/Experience");
 const Skill = require("../models/Skill");
 const Project = require("../models/Project");
 const { successResponse } = require("../utils/helpers");
-const { getCache, setCache } = require("../config/redis");
-
-const CACHE_KEY = "resume:json";
-const CACHE_TTL = 600;
 
 // ─── GET /api/resume ─────────────────────────────────────────────────────────
 const getResume = async (req, res) => {
-  const cached = await getCache(CACHE_KEY);
-  if (cached) return successResponse(res, 200, "Resume fetched (cached)", cached);
-
   const [experiences, skills, featuredProjects] = await Promise.all([
     Experience.find({ isPublished: true }).sort({ startDate: -1 }).lean(),
     Skill.find({ isPublished: true }).sort({ category: 1, proficiency: -1 }).lean(),
@@ -65,7 +58,6 @@ const getResume = async (req, res) => {
     })),
   };
 
-  await setCache(CACHE_KEY, resume, CACHE_TTL);
   return successResponse(res, 200, "Resume fetched", resume);
 };
 

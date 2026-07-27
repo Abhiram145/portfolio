@@ -5,7 +5,7 @@ import { PortfolioData } from "@/types";
 async function getPortfolioData(): Promise<PortfolioData | null> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api';
   try {
-    const res = await fetch(`${API_URL}/portfolio`, { next: { revalidate: 300 } });
+    const res = await fetch(`${API_URL}/portfolio`, { cache: 'no-store' });
     if (!res.ok) return null;
     const result = await res.json();
     return result.data;

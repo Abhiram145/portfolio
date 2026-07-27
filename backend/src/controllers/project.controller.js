@@ -1,23 +1,15 @@
 /**
- * Project Controller — Full CRUD with view/click tracking and caching
+ * Project Controller — Full CRUD with view/click tracking
  */
 const Project = require("../models/Project");
 const Analytics = require("../models/Analytics");
 const { successResponse, parsePagination, paginationMeta, createError } = require("../utils/helpers");
-const { getCache, setCache, deleteCachePattern } = require("../config/redis");
-
-const CACHE_KEY = "projects";
-const CACHE_TTL = 300;
 
 // ─── GET /api/projects ──────────────────────────────────────────────────────
 const getAll = async (req, res) => {
   const { page, limit, skip } = parsePagination(req.query);
   const isAdmin = req.user?.role === "admin";
   const { category, featured, status } = req.query;
-
-  const cacheKey = `${CACHE_KEY}:${page}:${limit}:${isAdmin}:${category}:${featured}:${status}`;
-  const cached = await getCache(cacheKey);
-  if (cached) return successResponse(res, 200, "Projects fetched (cached)", cached.data, cached.meta);
 
   const filter = isAdmin ? {} : { status: "published" };
   if (category) filter.category = category;
@@ -30,7 +22,6 @@ const getAll = async (req, res) => {
   ]);
 
   const meta = paginationMeta(total, page, limit);
-  await setCache(cacheKey, { data: projects, meta }, CACHE_TTL);
   return successResponse(res, 200, "Projects fetched", projects, meta);
 };
 
@@ -38,10 +29,6 @@ const getAll = async (req, res) => {
 const getById = async (req, res, next) => {
   const { id } = req.params;
   const isSlug = !id.match(/^[0-9a-fA-F]{24}$/);
-
-  const cacheKey = `${CACHE_KEY}:single:${id}`;
-  const cached = await getCache(cacheKey);
-  if (cached) return successResponse(res, 200, "Project fetched (cached)", cached);
 
   const query = isSlug ? { slug: id } : { _id: id };
   const project = await Project.findOne(query).lean();
@@ -60,14 +47,12 @@ const getById = async (req, res, next) => {
     referrer: req.get("referer") || null,
   }).catch(() => {});
 
-  await setCache(cacheKey, project, CACHE_TTL);
   return successResponse(res, 200, "Project fetched", project);
 };
 
 // ─── POST /api/projects ─────────────────────────────────────────────────────
 const create = async (req, res) => {
   const project = await Project.create(req.body);
-  await deleteCachePattern(`${CACHE_KEY}:*`);
   return successResponse(res, 201, "Project created", project);
 };
 
@@ -79,7 +64,6 @@ const update = async (req, res, next) => {
   });
   if (!project) return next(createError(404, "Project not found"));
 
-  await deleteCachePattern(`${CACHE_KEY}:*`);
   return successResponse(res, 200, "Project updated", project);
 };
 
@@ -88,7 +72,6 @@ const remove = async (req, res, next) => {
   const project = await Project.findByIdAndDelete(req.params.id);
   if (!project) return next(createError(404, "Project not found"));
 
-  await deleteCachePattern(`${CACHE_KEY}:*`);
   return successResponse(res, 200, "Project deleted");
 };
 
@@ -110,7 +93,6 @@ const trackClick = async (req, res, next) => {
     userAgent: req.get("user-agent"),
   }).catch(() => {});
 
-  await deleteCachePattern(`${CACHE_KEY}:single:${req.params.id}`);
   return successResponse(res, 200, "Click tracked");
 };
 
